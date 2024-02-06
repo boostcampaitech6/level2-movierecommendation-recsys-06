@@ -1,0 +1,20 @@
+blank_issues_enabled: true  # 사용자가 템플릿 없이 일반 이슈를 생성하는 것을 활성화합니다.
+
+issue_templates:
+  - name: 기능 추가 요청
+    description: 프로젝트에 추가하고 싶은 새로운 기능이나 개선 사항을 제안합니다.
+    title: "[FEATURE] " # 미리 채워진 제목 태그
+    labels: ["feature"] # 미리 채워진 라벨
+    template: feature_request.yml
+
+  - name: 버그 리포트
+    description: 프로젝트에서 발견된 버그를 보고합니다.
+    title: "[BUG] " # 미리 채워진 제목 태그
+    labels: ["bug"] # 미리 채워진 라벨
+    template: bug_report.yml
+
+  - name: 모델 생성 요청
+    description: 새로운 모델링 작업이나 기존 모델 개선을 위한 요청 사항입니다.
+    title: "[MODEL CREATION] " # 미리 채워진 제목 태그
+    labels: ["model-creation"] # 미리 채워진 라벨
+    template: model_creation_request.yml
