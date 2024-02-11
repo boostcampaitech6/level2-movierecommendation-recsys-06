@@ -1,0 +1,49 @@
+import torch
+import argparse
+import os
+
+## 각종 파라미터 세팅
+def argparsing():
+
+    parser = argparse.ArgumentParser(description='PyTorch Variational Autoencoders for Collaborative Filtering')
+
+    parser.add_argument('--data_dir', type=str, default='../../data/train')
+    parser.add_argument('--data', type=str, default='../../data/train',
+                        help='Movielens dataset location')
+    parser.add_argument('--heldout_users', type=int, default=3000)
+
+    parser.add_argument('--lr', type=float, default=1e-3,
+                        help='initial learning rate')
+    parser.add_argument('--wd', type=float, default=0.00,
+                        help='weight decay coefficient')
+    parser.add_argument('--batch_size', type=int, default=500,
+                        help='batch size')
+    parser.add_argument('--epochs', type=int, default=20,
+                        help='upper epoch limit')
+    parser.add_argument('--total_anneal_steps', type=int, default=200000,
+                        help='the total number of gradient updates for annealing')
+    parser.add_argument('--anneal_cap', type=float, default=0.2,
+                        help='largest annealing parameter')
+    parser.add_argument('--seed', type=int, default=1111,
+                        help='random seed')
+    parser.add_argument('--cuda', action='store_true',
+                        help='use CUDA')
+    parser.add_argument('--log_interval', type=int, default=100, metavar='N',
+                        help='report interval')
+    parser.add_argument('--save', type=str, default='model.pt',
+                        help='path to save the final model')
+    
+    parser.add_argument('--model', type=str, default='MultiVAE',
+                        help='select model')
+
+    args = parser.parse_args([])
+    args.pro_dir = os.path.join(args.data_dir, 'pro_sg')
+
+    if torch.cuda.is_available():
+        args.cuda = True
+    args.device = torch.device("cuda" if args.cuda else "cpu")
+
+    return args
+
+# Set the random seed manually for reproductibility.
+
