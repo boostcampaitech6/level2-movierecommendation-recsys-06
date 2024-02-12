@@ -25,6 +25,7 @@ python main.py
     1) **제출파일**
         mission>submission에 저장됨
         파일 명: {모델 명} {실해시간}.csv
+        
     2) **모델파일**
         mission>model_files에 저장됨
         파일 명: {모델 명} {실행시간}.pt

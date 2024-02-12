@@ -5,13 +5,13 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 from scipy import sparse
-from run import argparsing
+from utils import argparsing
 import pandas as pd
 from dataloader import DataLoader
-from models import MultiDAE, MultiVAE, loss_function_dae, loss_function_vae
-from trainer import train, evaluate, test, inference, verbose
+from models import MultiDAE, MultiVAE, RecVAE, loss_function_dae, loss_function_vae
+from trainers import test, inference
 import time
-
+from runners import multi_vae_runner, recvae_runner
 
 ## setting
 current_time = time.strftime('%y%m%d_%H%M%S')
@@ -27,26 +27,25 @@ N = train_data.shape[0]
 
 ## Build the model
 p_dims = [200, 600, n_items]
-models = {'MultiDAE': MultiDAE(p_dims), 'MultiVAE': MultiVAE(p_dims)}
-losses = {'MultiDAE': loss_function_dae, 'MultiVAE':loss_function_vae}
+models = {'MultiDAE': MultiDAE(p_dims), 'MultiVAE': MultiVAE(p_dims), 'RecVAE': RecVAE(args.hidden_dim, args.latent_dim, n_items)}
+losses = {'MultiDAE': loss_function_dae, 'MultiVAE':loss_function_vae, 'RecVAE': None}
+runners = {'MultiDAE': multi_vae_runner, 'MultiVAE': multi_vae_runner, 'RecVAE':recvae_runner}
 
+print(f'INITIALIZING {args.model}....')
 model = models[args.model].to(args.device)
+runner = runners[args.model]
 criterion = losses[args.model]
+
 optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
 
 
-## Training
+## Train
+print('\nTRAINING....')
 best_n100 = -np.inf
-update_count = 0
+args.update_count = 0
 
 for epoch in range(1, args.epochs):
-    epoch_start_time = time.time()
-
-    update_count = train(args, model, criterion, optimizer, train_data, epoch, update_count, is_VAE=True)
-    val_loss, n100, r20, r50 = evaluate(args, model, criterion, vad_data_tr, vad_data_te, update_count, is_VAE=True)
-    verbose(epoch, epoch_start_time, val_loss, n100, r20, r50)
-    
-    n_iter = epoch * len(range(0, N, args.batch_size))
+    n100 = runner(args, model, criterion, optimizer, train_data, vad_data_tr, vad_data_te, epoch, N)
 
     # Save the model if the n100 is the best we've seen so far.
     if n100 > best_n100:
@@ -54,15 +53,18 @@ for epoch in range(1, args.epochs):
             torch.save(model, f)
         best_n100 = n100
         best_epoch = epoch
+
 print('best epoch:', best_epoch)
 print(f'best score n100:{best_n100}')
 
 ## load best model
-with open(args.save, 'rb') as f:
+with open(f'model_files/{args.model} {current_time}.pt', 'rb') as f:
     model = torch.load(f)
 
 ## Test
-test(args, model, criterion, test_data_tr, test_data_te, update_count)
+print('\nTESTING....')
+test(args, model, criterion, test_data_tr, test_data_te)
 
 ## Inference
-inference(args, model, data_inf, current_time, is_VAE=False)
+print('\nINFERING....')
+inference(args, model, data_inf, current_time)

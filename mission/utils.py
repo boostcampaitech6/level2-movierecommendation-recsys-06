@@ -2,6 +2,16 @@ import torch
 import argparse
 import os
 
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 ## 각종 파라미터 세팅
 def argparsing():
 
@@ -12,7 +22,7 @@ def argparsing():
                         help='Movielens dataset location')
     parser.add_argument('--heldout_users', type=int, default=3000)
 
-    parser.add_argument('--lr', type=float, default=1e-3,
+    parser.add_argument('--lr', type=float, default=5*1e-4,
                         help='initial learning rate')
     parser.add_argument('--wd', type=float, default=0.00,
                         help='weight decay coefficient')
@@ -35,13 +45,24 @@ def argparsing():
     
     parser.add_argument('--model', type=str, default='MultiVAE',
                         help='select model')
+    
+    parser.add_argument('--encoder_epochs', type=int, default=3,
+                        help='num of encoder epochs per decoder epoch')
+    parser.add_argument('--beta', type=str2bool, default='False',
+                        help='recvae composite prior weight')
+    parser.add_argument('--gamma', type=int, default=0.005,
+                        help='recvae composite prior rebalancing parameter')
+    parser.add_argument('--hidden-dim', type=int, default=600)
+    parser.add_argument('--latent-dim', type=int, default=200)
 
-    args = parser.parse_args([])
+    args = parser.parse_args()
     args.pro_dir = os.path.join(args.data_dir, 'pro_sg')
 
     if torch.cuda.is_available():
         args.cuda = True
     args.device = torch.device("cuda" if args.cuda else "cpu")
+
+    args.is_VAE = True if args.model=='MultiVAE' else False
 
     return args
 

@@ -26,11 +26,12 @@ def sparse2torch_sparse(data): # encoder F.normalize에서 대신 활용
     t = torch.sparse.FloatTensor(indices, torch.from_numpy(values).float(), [samples, features])
     return torch.FloatTensor(t.to_dense())
 
+
 def naive_sparse2tensor(data):
     return torch.FloatTensor(data.toarray())
 
 
-def train(args, model, criterion, optimizer, train_data, epoch, update_count, is_VAE = False):
+def vae_train(args, model, criterion, optimizer, train_data, epoch):
     # Turn on training mode
     model.train()
     train_loss = 0.0
@@ -42,15 +43,15 @@ def train(args, model, criterion, optimizer, train_data, epoch, update_count, is
 
     for batch_idx, start_idx in enumerate(range(0, N, args.batch_size)):
         end_idx = min(start_idx + args.batch_size, N)
-        data = train_data[idxlist[start_idx:end_idx]] # 여기의 train_data: sparse interaction matrix 형태
-        data = naive_sparse2tensor(data).to(args.device)
+        batch = train_data[idxlist[start_idx:end_idx]] # 여기의 train_data: sparse interaction matrix 형태
+        data = naive_sparse2tensor(batch).to(args.device)
         # data = sparse2torch_sparse(data).to(device)
         optimizer.zero_grad()
 
-        if is_VAE:
+        if args.model == 'MultiVAE':
           if args.total_anneal_steps > 0:
             anneal = min(args.anneal_cap,
-                            1. * update_count / args.total_anneal_steps)
+                            1. * args.update_count / args.total_anneal_steps)
           else:
               anneal = args.anneal_cap
 
@@ -66,7 +67,7 @@ def train(args, model, criterion, optimizer, train_data, epoch, update_count, is
         train_loss += loss.item()
         optimizer.step()
 
-        update_count += 1
+        args.update_count += 1
 
         if batch_idx % args.log_interval == 0 and batch_idx > 0:
             elapsed = time.time() - start_time
@@ -79,17 +80,16 @@ def train(args, model, criterion, optimizer, train_data, epoch, update_count, is
 
             start_time = time.time()
             train_loss = 0.0
-    
-    return update_count
 
 
-def evaluate(args, model, criterion, data_tr, data_te, update_count, is_VAE=False):
+def vae_evaluate(args, model, criterion, data_tr, data_te):
     # Turn on evaluation mode
     model.eval()
     e_idxlist = list(range(data_tr.shape[0]))
     e_N = data_tr.shape[0]
     total_val_loss_list = []
     n100_list = []
+    r10_list = []
     r20_list = []
     r50_list = []
 
@@ -101,11 +101,11 @@ def evaluate(args, model, criterion, data_tr, data_te, update_count, is_VAE=Fals
 
             data_tensor = naive_sparse2tensor(data).to(args.device)
             # data_tensor = sparse2torch_sparse(data).to(device)
-            if is_VAE :
+            if args.model=='MultiVAE':
 
               if args.total_anneal_steps > 0:
                   anneal = min(args.anneal_cap,
-                                1. * update_count / args.total_anneal_steps)
+                                1. * args.update_count / args.total_anneal_steps)
               else:
                   anneal = args.anneal_cap
 
@@ -124,31 +124,40 @@ def evaluate(args, model, criterion, data_tr, data_te, update_count, is_VAE=Fals
             recon_batch[data.nonzero()] = -np.inf
 
             n100 = NDCG_binary_at_k_batch(recon_batch, heldout_data, 100)
+            r10 = Recall_at_k_batch(recon_batch, heldout_data, 10)
             r20 = Recall_at_k_batch(recon_batch, heldout_data, 20)
             r50 = Recall_at_k_batch(recon_batch, heldout_data, 50)
             # top10 = torch.topk(recon_batch)
 
             n100_list.append(n100)
+            r10_list.append(r10)
             r20_list.append(r20)
             r50_list.append(r50)
 
     n100_list = np.concatenate(n100_list)
+    r10_list = np.concatenate(r10_list)
     r20_list = np.concatenate(r20_list)
     r50_list = np.concatenate(r50_list)
 
-    return np.nanmean(total_val_loss_list), np.nanmean(n100_list), np.nanmean(r20_list), np.nanmean(r50_list)
+    return np.nanmean(total_val_loss_list), np.nanmean(n100_list), np.nanmean(r10_list), np.nanmean(r20_list), np.nanmean(r50_list)
 
 
-def test(args, model, criterion, test_data_tr, test_data_te, update_count):
+def test(args, model, criterion, test_data_tr, test_data_te):
     # Run on test data.
-    test_loss, n100, r20, r50 = evaluate(args, model, criterion, test_data_tr, test_data_te, update_count, is_VAE=True)
+    if args.model in ['MultiVAE','MultiDAE']:
+        print('vae evaluting')
+        test_loss, n100, r10, r20, r50 = vae_evaluate(args, model, criterion, test_data_tr, test_data_te)
+    elif args.model == 'RecVAE':
+        print('rec-vae evaluting')
+        test_loss, n100, r10, r20, r50 = recvae_evaluate(args, model, test_data_tr, test_data_te)
+
     print('=' * 89)
-    print('| End of training | test loss {:4.2f} | n100 {:4.2f} | r20 {:4.2f} | '
-            'r50 {:4.2f}'.format(test_loss, n100, r20, r50))
+    print('| End of training | test loss {:4.2f} | n100 {:4.2f} | r10 {:4.2f}| r20 {:4.2f} | '
+            'r50 {:4.2f}'.format(test_loss, n100, r10, r20, r50))
     print('=' * 89)
 
 
-def inference(args, model, data, current_time, is_VAE=False):
+def inference(args, model, data, current_time):
    
     # id
     with open('json_id/id2show.json', 'r') as json_file:
@@ -172,12 +181,16 @@ def inference(args, model, data, current_time, is_VAE=False):
             end_idx = min(start_idx + args.batch_size, N)
             batch = data[idxlist[start_idx:end_idx]]
 
-            data_tensor = naive_sparse2tensor(data).to(args.device)
+            data_tensor = naive_sparse2tensor(batch).to(args.device)
             # data_tensor = sparse2torch_sparse(batch).to(args.device)
-            if is_VAE :
-              recon_batch, mu, logvar = model(data_tensor)
-            else :
-              recon_batch = model(data_tensor)
+            if args.model=='MultiVAE':
+                recon_batch, mu, logvar = model(data_tensor)
+            elif args.model=='MultiDAE':
+                recon_batch = model(data_tensor)
+            elif args.model=='RecVAE':
+                recon_batch = model(data_tensor, beta=args.beta, gamma=args.gamma, dropout_rate=0, calculate_loss=False)
+            else:
+                raise KeyError(f"There's no such model {args.model}")
 
             # Exclude examples from training set
             recon_batch = recon_batch
@@ -186,24 +199,109 @@ def inference(args, model, data, current_time, is_VAE=False):
             # top-k choice
             topk = torch.topk(input=recon_batch, k=10)
             batch_topk = list(topk.indices.reshape(-1).detach().cpu().numpy())
-          
             total_topk.extend(batch_topk)
 
 
     result['user'] = np.repeat(np.arange(31360),10)
     result['item'] = total_topk
 
-    result['user'] = result['user'].apply(lambda x: id2profile[x])
-    result['item'] = result['item'].apply(lambda x: id2show[x])
+    result['user'] = result['user'].apply(lambda x: id2profile[str(x)])
+    result['item'] = result['item'].apply(lambda x: id2show[str(x)])
     
     result_df = result.sort_values('user').reset_index(drop=True)
     result_df.to_csv(f'submission/{args.model}_{current_time}.csv', index=False)
 
 
-def verbose(epoch, epoch_start_time, val_loss, n100, r20, r50):
+def verbose(epoch, epoch_start_time, val_loss, n100, r10, r20, r50):
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:4.2f}s | valid loss {:4.2f} | '
-                'n100 {:5.3f} | r20 {:5.3f} | r50 {:5.3f}'.format(
+                'n100 {:5.3f} | r10 {:4.2f} | r20 {:5.3f} | r50 {:5.3f}'.format(
                     epoch, time.time() - epoch_start_time, val_loss,
-                    n100, r20, r50))
+                    n100, r10, r20, r50))
         print('-' * 89)
+
+
+def recvae_train(args, model, optimizer, train_data, epoch, dropout_rate):
+    # Turn on training mode
+    model.train()
+    N = train_data.shape[0]
+    idxlist = list(range(N))
+
+    np.random.shuffle(idxlist)
+
+    for batch_idx, start_idx in enumerate(range(0, N, args.batch_size)):
+        end_idx = min(start_idx + args.batch_size, N)
+        data = train_data[idxlist[start_idx:end_idx]] # 여기의 train_data: sparse interaction matrix 형태
+        data_tensor = naive_sparse2tensor(data).to(args.device)
+        # data = sparse2torch_sparse(data).to(device)
+        optimizer.zero_grad()
+                
+        _, loss = model(data_tensor, beta=args.beta, gamma=args.gamma, dropout_rate=dropout_rate)
+        loss.backward()
+        optimizer.step()
+
+        # reporting
+        if batch_idx % args.log_interval == 0 and batch_idx > 0:
+            elapsed = time.time() - start_time
+            print('| epoch {:3d} | {:4d}/{:4d} batches | ms/batch {:4.2f} | '
+                    'loss {:4.2f}'.format(
+                        epoch, batch_idx, len(range(0, N, args.batch_size)),
+                        elapsed * 1000 / args.log_interval,
+                        train_loss / args.log_interval))
+
+            start_time = time.time()
+            train_loss = 0.0
+
+
+def recvae_evaluate(args, model, data_tr, data_te):
+    # Turn on evaluation mode
+    model.eval()
+    e_idxlist = list(range(data_tr.shape[0]))
+    e_N = data_tr.shape[0]
+    total_val_loss_list = []
+    n100_list = []
+    r10_list = []
+    r20_list = []
+    r50_list = []
+
+    with torch.no_grad():
+        for start_idx in range(0, e_N, args.batch_size):
+            end_idx = min(start_idx + args.batch_size, e_N)
+            data = data_tr[e_idxlist[start_idx:end_idx]]
+            heldout_data = data_te[e_idxlist[start_idx:end_idx]]
+
+            data_tensor = naive_sparse2tensor(data).to(args.device)
+            # data_tensor = sparse2torch_sparse(data).to(device)
+            recon_batch, loss = model(data_tensor, beta=args.beta, gamma=args.gamma, dropout_rate=0)
+
+            total_val_loss_list.append(loss.item()) # 에러 날 수도...
+
+            # Exclude examples from training set
+            recon_batch = recon_batch.cpu().numpy()
+            recon_batch[data.nonzero()] = -np.inf
+
+            n100 = NDCG_binary_at_k_batch(recon_batch, heldout_data, 100)
+            r10 = Recall_at_k_batch(recon_batch, heldout_data, 10)
+            r20 = Recall_at_k_batch(recon_batch, heldout_data, 20)
+            r50 = Recall_at_k_batch(recon_batch, heldout_data, 50)
+
+            n100_list.append(n100)
+            r10_list.append(r10)
+            r20_list.append(r20)
+            r50_list.append(r50)
+
+    n100_list = np.concatenate(n100_list)
+    r10_list = np.concatenate(r10_list)
+    r20_list = np.concatenate(r20_list)
+    r50_list = np.concatenate(r50_list)
+
+    return np.nanmean(total_val_loss_list), np.nanmean(n100_list), np.nanmean(r10_list), np.nanmean(r20_list), np.nanmean(r50_list)
+
+
+def recvae_test(args, model, criterion, test_data_tr, test_data_te):
+    # Run on test data.
+    test_loss, n100, r20, r50 = recvae_evaluate(args, model, criterion, test_data_tr, test_data_te)
+    print('=' * 89)
+    print('| End of training | test loss {:4.2f} | n100 {:4.2f} | r20 {:4.2f} | '
+            'r50 {:4.2f}'.format(test_loss, n100, r20, r50))
+    print('=' * 89)
