@@ -20,7 +20,7 @@
 python preprocess.py
 
 ### 2. 이후 모델 학습 가능!
-python main.py
+python main.py --model 모델명
 
     1) **제출파일**
         mission>submission에 저장됨
@@ -31,6 +31,10 @@ python main.py
         파일 명: {모델 명} {실행시간}.pt
 
 
-# 유의사항
-현재는 static model의 전처리만 지원\
-차후에 sequential model도 적용 예정
+# 모델 종류
+- MultiDAE
+    python main.py --model MultiDAE
+- MultiVAE
+    python main.py --model MultiVAE
+- RecVAE
+    python main.py --model RecVAE
