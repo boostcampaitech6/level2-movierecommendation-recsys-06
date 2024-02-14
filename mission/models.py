@@ -311,6 +311,7 @@ class EASE(nn.Module):
 
         self.topk = 10
 
+    # train
     def fit(self, X):
         '''
         fit closed form parameters
@@ -329,9 +330,11 @@ class EASE(nn.Module):
         self.item_similarity = np.array(self.item_similarity)
         self.interaction_matrix = X # user_num * item_num
 
+    # 유저 u와 아이템 i 사이의 score를 예측
     def predict(self, u, i):
         return self.interaction_matrix[u, :].multiply(self.item_similarity[:, i].T).sum(axis=1).getA1()[0]
 
+    # 유저(us)들의 후보군(cands_ids)들에 대한 ranking
     def rank(self, test_loader):
         rec_ids = None
 
@@ -349,10 +352,25 @@ class EASE(nn.Module):
 
         return rec_ids
 
+    # trainset 유저 중 일부를 score + ranking
     def full_rank(self, u):
         scores = self.interaction_matrix[u, :] @ self.item_similarity
+        scores[self.interaction_matrix.nonzero()] = -np.inf
         return np.argsort(-scores)[:, :self.topk]
     
-    def rank_all(self):
-        scores = self.interaction_matrix @ self.item_similarity
+    # 새로운 유저 score: validation
+    def predict_new(self, new_interaction):
+        scores = new_interaction @ self.item_similarity
+        return scores  #[n_users, n_items]
+    
+    # 새로운 유저 score+ranking: inference
+    def rank_new(self, new_interaction):
+        scores = new_interaction @ self.item_similarity
+        scores[new_interaction.nonzero()] = -np.inf
+        return np.argsort(-scores)[:,:self.topk]
+    
+    # score + ranking
+    def rank_all(self, data):
+        scores = data @ self.item_similarity
+        scores[data.nonzero()] = -np.inf
         return np.argsort(-scores)[:,:self.topk]

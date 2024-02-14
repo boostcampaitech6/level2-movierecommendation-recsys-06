@@ -9,7 +9,7 @@ from utils import argparsing
 import pandas as pd
 from dataloader import DataLoader
 from models import MultiDAE, MultiVAE, loss_function_dae, loss_function_vae
-from trainers import vae_train, vae_evaluate, recvae_train, recvae_evaluate, test, inference, verbose
+from trainers import vae_train, vae_evaluate, recvae_train, recvae_evaluate, ease_evaluate, test, inference, verbose
 import time
 
 
@@ -48,10 +48,12 @@ def recvae_runner(args, model, criterion, optimizer, train_data, vad_data_tr, va
 
 def ease_runner(args, model, criterion, optimizer, train_data, vad_data_tr, vad_data_te, epoch, N, data_inf):
 
-    # train
-    model.fit(data_inf)
+    epoch_start_time = time.time()
 
-    # validation
+    model.fit(train_data)
+    val_loss, n100, r10, r20, r50 = ease_evaluate(args, model, vad_data_tr, vad_data_te)
+    verbose(epoch, epoch_start_time, val_loss, n100, r10, r20, r50)
 
-    epoch = args.epochs
-    return 1
+    model.reg_weight += 100
+    
+    return n100

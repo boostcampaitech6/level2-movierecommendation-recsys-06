@@ -150,12 +150,14 @@ def test(args, model, criterion, test_data_tr, test_data_te):
     elif args.model == 'RecVAE':
         print('rec-vae evaluting')
         test_loss, n100, r10, r20, r50 = recvae_evaluate(args, model, test_data_tr, test_data_te)
+    elif args.model == 'EASE':
+        print('ease evaluating')
+        test_loss, n100, r10, r20, r50 = ease_evaluate(args, model, test_data_tr, test_data_te)
 
-    if args.model != 'EASE':
-        print('=' * 89)
-        print('| End of training | test loss {:4.2f} | n100 {:4.2f} | r10 {:4.2f}| r20 {:4.2f} | '
-                'r50 {:4.2f}'.format(test_loss, n100, r10, r20, r50))
-        print('=' * 89)
+    print('=' * 89)
+    print('| End of training | test loss {:4.2f} | n100 {:4.2f} | r10 {:4.2f}| r20 {:4.2f} | '
+            'r50 {:4.2f}'.format(test_loss, n100, r10, r20, r50))
+    print('=' * 89)
 
 
 def inference(args, model, data, current_time):
@@ -178,7 +180,7 @@ def inference(args, model, data, current_time):
     result = pd.DataFrame()
 
     if args.model=='EASE':
-        pred = model.rank_all()
+        pred = model.rank_new(data)
         total_topk = pred.reshape(-1)
 
     else:
@@ -311,3 +313,18 @@ def recvae_test(args, model, criterion, test_data_tr, test_data_te):
     print('| End of training | test loss {:4.2f} | n100 {:4.2f} | r20 {:4.2f} | '
             'r50 {:4.2f}'.format(test_loss, n100, r20, r50))
     print('=' * 89)
+
+
+def ease_evaluate(args, model, data_tr, data_te):
+
+    scores = model.predict_new(data_tr)
+    scores[data_tr.nonzero()] = -np.inf
+
+    n100 = NDCG_binary_at_k_batch(scores, data_te, 100)
+    r10 = Recall_at_k_batch(scores, data_te, 10)
+    r20 = Recall_at_k_batch(scores, data_te, 20)
+    r50 = Recall_at_k_batch(scores, data_te, 50)
+
+    # criterion(scores, test_data_te)
+
+    return 1., np.nanmean(n100), np.nanmean(r10), np.nanmean(r20), np.nanmean(r50)
