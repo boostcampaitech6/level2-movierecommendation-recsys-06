@@ -50,10 +50,10 @@ def ease_runner(args, model, criterion, optimizer, train_data, vad_data_tr, vad_
 
     epoch_start_time = time.time()
 
-    model.fit(train_data)
+    model.fit(data_inf)
     val_loss, n100, r10, r20, r50 = ease_evaluate(args, model, vad_data_tr, vad_data_te)
     verbose(epoch, epoch_start_time, val_loss, n100, r10, r20, r50)
 
-    model.reg_weight += 100
+    # model.reg_weight += 10
     
     return n100

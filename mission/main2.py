@@ -10,7 +10,7 @@ import pandas as pd
 from dataloader import DataLoader
 from dataloader2 import DataLoader2
 from models import MultiDAE, MultiVAE, RecVAE, EASE, loss_function_dae, loss_function_vae
-from trainers import test, inference
+from trainers import test, inference, inference2
 import time
 from runners import multi_vae_runner, recvae_runner, ease_runner
 
@@ -21,8 +21,8 @@ torch.manual_seed(args.seed)
 
 
 ## Load data
-loader = DataLoader(args.data)
-n_items, train_data, vad_data_tr, vad_data_te, test_data_tr, test_data_te, data_inf = loader.data_loading()
+loader = DataLoader2(args.data)
+n_items, train_data, vad_data_tr, vad_data_te, data_inf = loader.data_loading()
 N = train_data.shape[0]
 
 
@@ -64,9 +64,9 @@ with open(f'model_files/{args.model} {current_time}.pt', 'rb') as f:
     model = torch.load(f)
 
 ## Test
-print('\nTESTING....')
-test(args, model, criterion, test_data_tr, test_data_te)
+# print('\nTESTING....')
+# test(args, model, criterion, test_data_tr, test_data_te)
 
 ## Inference
 print('\nINFERING....')
-inference(args, model, data_inf, current_time)
+inference2(args, model, data_inf, current_time)

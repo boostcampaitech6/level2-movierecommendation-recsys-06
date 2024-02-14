@@ -64,8 +64,8 @@ def argparsing():
 
     args.is_VAE = True if args.model=='MultiVAE' else False
 
-    # if args.model=='EASE':
-    #     args.epochs = 1
+    if args.model=='EASE':
+        args.epochs = 1
 
     return args
 

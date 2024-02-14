@@ -166,3 +166,82 @@ def numerize_write(args, profile2id, show2id, raw_data, train_plays, vad_plays_t
     
     with open('json_id/id2profile.json', 'w') as json_file :
         json.dump(id2profile, json_file)
+
+## TRAIN/VAL = 9:1 version
+def split_uid2(args, unique_uid):
+
+    # Split Train/Validation/Test User Indices
+    n_users = unique_uid.size #31360
+    n_heldout_users = args.heldout_users
+
+    tr_users = unique_uid[:(n_users - n_heldout_users)]
+    vd_users = unique_uid[(n_users - n_heldout_users):] # val 3000명
+
+    return tr_users, vd_users
+
+
+def split_data2(args, unique_uid, raw_data):
+
+    tr_users, vd_users = split_uid2(args, unique_uid)
+    print("훈련 데이터에 사용될 사용자 수:", len(tr_users))
+    print("검증 데이터에 사용될 사용자 수:", len(vd_users))
+
+
+    ##훈련 데이터에 해당하는 아이템들
+    train_plays = raw_data.loc[raw_data['user'].isin(tr_users)]
+
+    ##아이템 ID
+    unique_sid = pd.unique(train_plays['item'])
+
+    show2id = dict((int(sid), int(i)) for (i, sid) in enumerate(unique_sid))
+    profile2id = dict((int(pid), int(i)) for (i, pid) in enumerate(unique_uid))
+
+    if not os.path.exists(args.pro_dir):
+        os.makedirs(args.pro_dir)
+
+    with open(os.path.join(args.pro_dir, 'unique_sid.txt'), 'w') as f:
+        for sid in unique_sid:
+            f.write('%s\n' % sid)
+
+    #Validation과 Test에는 input으로 사용될 tr 데이터와 정답을 확인하기 위한 te 데이터로 분리되었습니다.
+    vad_plays = raw_data.loc[raw_data['user'].isin(vd_users)]
+    vad_plays = vad_plays.loc[vad_plays['item'].isin(unique_sid)]
+    vad_plays_tr, vad_plays_te = split_train_test_proportion(vad_plays)
+
+    return train_plays, vad_plays_tr, vad_plays_te, show2id, profile2id
+
+
+def numerize_write2(args, profile2id, show2id, raw_data, train_plays, vad_plays_tr, vad_plays_te):
+
+    train_data = numerize(train_plays, profile2id, show2id)
+    train_data.to_csv(os.path.join(args.pro_dir, 'train.csv'), index=False)
+
+    vad_data_tr = numerize(vad_plays_tr, profile2id, show2id)
+    vad_data_tr.to_csv(os.path.join(args.pro_dir, 'validation_tr.csv'), index=False)
+
+    vad_data_te = numerize(vad_plays_te, profile2id, show2id)
+    vad_data_te.to_csv(os.path.join(args.pro_dir, 'validation_te.csv'), index=False)
+
+    inf_data = raw_data[['user','item']].copy()
+    inf_data = numerize(inf_data, profile2id, show2id)
+    inf_data.to_csv(os.path.join(args.pro_dir, 'inference.csv'), index=False)
+
+    id2show = {v:k for k,v in show2id.items()}
+    id2profile = {v:k for k,v in profile2id.items()}
+
+    show2id = json.dumps(show2id)
+    profile2id = json.dumps(profile2id)
+    id2show = json.dumps(id2show)
+    id2profile = json.dumps(id2profile)
+    
+    with open('json_id/show2id_2.json', 'w') as json_file :
+        json.dump(show2id, json_file)
+    
+    with open('json_id/profile2id_2.json', 'w') as json_file :
+        json.dump(show2id, json_file)
+
+    with open('json_id/id2show_2.json', 'w') as json_file :
+        json.dump(id2show, json_file)
+    
+    with open('json_id/id2profile_2.json', 'w') as json_file :
+        json.dump(id2profile, json_file)
