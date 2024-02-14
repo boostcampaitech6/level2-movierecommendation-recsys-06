@@ -8,10 +8,10 @@ from scipy import sparse
 from utils import argparsing
 import pandas as pd
 from dataloader import DataLoader
-from models import MultiDAE, MultiVAE, RecVAE, loss_function_dae, loss_function_vae
+from models import MultiDAE, MultiVAE, RecVAE, EASE, loss_function_dae, loss_function_vae
 from trainers import test, inference
 import time
-from runners import multi_vae_runner, recvae_runner
+from runners import multi_vae_runner, recvae_runner, ease_runner
 
 ## setting
 current_time = time.strftime('%y%m%d_%H%M%S')
@@ -27,16 +27,16 @@ N = train_data.shape[0]
 
 ## Build the model
 p_dims = [200, 600, n_items]
-models = {'MultiDAE': MultiDAE(p_dims), 'MultiVAE': MultiVAE(p_dims), 'RecVAE': RecVAE(args.hidden_dim, args.latent_dim, n_items)}
-losses = {'MultiDAE': loss_function_dae, 'MultiVAE':loss_function_vae, 'RecVAE': None}
-runners = {'MultiDAE': multi_vae_runner, 'MultiVAE': multi_vae_runner, 'RecVAE':recvae_runner}
+models = {'MultiDAE': MultiDAE(p_dims), 'MultiVAE': MultiVAE(p_dims), 'RecVAE': RecVAE(args.hidden_dim, args.latent_dim, n_items), 'EASE':EASE(31360, n_items)}
+losses = {'MultiDAE': loss_function_dae, 'MultiVAE':loss_function_vae, 'RecVAE': None, 'EASE': None}
+runners = {'MultiDAE': multi_vae_runner, 'MultiVAE': multi_vae_runner, 'RecVAE':recvae_runner, 'EASE':ease_runner}
 
 print(f'INITIALIZING {args.model}....')
 model = models[args.model].to(args.device)
 runner = runners[args.model]
 criterion = losses[args.model]
 
-optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+optimizer = None if args.model=='EASE' else optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
 
 
 ## Train
@@ -44,8 +44,8 @@ print('\nTRAINING....')
 best_n100 = -np.inf
 args.update_count = 0
 
-for epoch in range(1, args.epochs):
-    n100 = runner(args, model, criterion, optimizer, train_data, vad_data_tr, vad_data_te, epoch, N)
+for epoch in range(1, args.epochs+1):
+    n100 = runner(args, model, criterion, optimizer, train_data, vad_data_tr, vad_data_te, epoch, N, data_inf)
 
     # Save the model if the n100 is the best we've seen so far.
     if n100 > best_n100:

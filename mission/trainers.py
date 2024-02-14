@@ -151,10 +151,11 @@ def test(args, model, criterion, test_data_tr, test_data_te):
         print('rec-vae evaluting')
         test_loss, n100, r10, r20, r50 = recvae_evaluate(args, model, test_data_tr, test_data_te)
 
-    print('=' * 89)
-    print('| End of training | test loss {:4.2f} | n100 {:4.2f} | r10 {:4.2f}| r20 {:4.2f} | '
-            'r50 {:4.2f}'.format(test_loss, n100, r10, r20, r50))
-    print('=' * 89)
+    if args.model != 'EASE':
+        print('=' * 89)
+        print('| End of training | test loss {:4.2f} | n100 {:4.2f} | r10 {:4.2f}| r20 {:4.2f} | '
+                'r50 {:4.2f}'.format(test_loss, n100, r10, r20, r50))
+        print('=' * 89)
 
 
 def inference(args, model, data, current_time):
@@ -176,30 +177,35 @@ def inference(args, model, data, current_time):
     total_topk = []
     result = pd.DataFrame()
 
-    with torch.no_grad():
-        for start_idx in range(0, N, args.batch_size):
-            end_idx = min(start_idx + args.batch_size, N)
-            batch = data[idxlist[start_idx:end_idx]]
+    if args.model=='EASE':
+        pred = model.rank_all()
+        total_topk = pred.reshape(-1)
 
-            data_tensor = naive_sparse2tensor(batch).to(args.device)
-            # data_tensor = sparse2torch_sparse(batch).to(args.device)
-            if args.model=='MultiVAE':
-                recon_batch, mu, logvar = model(data_tensor)
-            elif args.model=='MultiDAE':
-                recon_batch = model(data_tensor)
-            elif args.model=='RecVAE':
-                recon_batch = model(data_tensor, beta=args.beta, gamma=args.gamma, dropout_rate=0, calculate_loss=False)
-            else:
-                raise KeyError(f"There's no such model {args.model}")
+    else:
+        with torch.no_grad():
+            for start_idx in range(0, N, args.batch_size):
+                end_idx = min(start_idx + args.batch_size, N)
+                batch = data[idxlist[start_idx:end_idx]]
 
-            # Exclude examples from training set
-            recon_batch = recon_batch
-            recon_batch[batch.nonzero()] = -1e9
+                data_tensor = naive_sparse2tensor(batch).to(args.device)
+                # data_tensor = sparse2torch_sparse(batch).to(args.device)
+                if args.model=='MultiVAE':
+                    recon_batch, mu, logvar = model(data_tensor)
+                elif args.model=='MultiDAE':
+                    recon_batch = model(data_tensor)
+                elif args.model=='RecVAE':
+                    recon_batch = model(data_tensor, beta=args.beta, gamma=args.gamma, dropout_rate=0, calculate_loss=False)
+                else:
+                    raise KeyError(f"There's no such model {args.model}")
 
-            # top-k choice
-            topk = torch.topk(input=recon_batch, k=10)
-            batch_topk = list(topk.indices.reshape(-1).detach().cpu().numpy())
-            total_topk.extend(batch_topk)
+                # Exclude examples from training set
+                recon_batch = recon_batch
+                recon_batch[batch.nonzero()] = -1e9
+
+                # top-k choice
+                topk = torch.topk(input=recon_batch, k=10)
+                batch_topk = list(topk.indices.reshape(-1).detach().cpu().numpy())
+                total_topk.extend(batch_topk)
 
 
     result['user'] = np.repeat(np.arange(31360),10)

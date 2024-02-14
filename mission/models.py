@@ -2,6 +2,7 @@ from torch import nn
 import torch.nn.functional as F
 import torch
 import numpy as np
+import scipy.sparse as sp
 
 
 #이미 완성된 MultiDAE의 코드를 참고하여 그 아래 MultiVAE의 코드를 완성해보세요!
@@ -212,11 +213,19 @@ class Encoder(nn.Module):
     
         x = F.dropout(x, p=dropout_rate, training=self.training)
         
+        # dense connection
         h1 = self.ln1(swish(self.fc1(x)))
         h2 = self.ln2(swish(self.fc2(h1) + h1))
         h3 = self.ln3(swish(self.fc3(h2) + h1 + h2))
         h4 = self.ln4(swish(self.fc4(h3) + h1 + h2 + h3))
         h5 = self.ln5(swish(self.fc5(h4) + h1 + h2 + h3 + h4))
+
+        # residual connection
+        # h1 = self.ln1(swish(self.fc1(x)))
+        # h2 = self.ln2(swish(self.fc2(h1) + h1))
+        # h3 = self.ln3(swish(self.fc3(h2) + h2))
+        # h4 = self.ln4(swish(self.fc4(h3) + h3))
+        # h5 = self.ln5(swish(self.fc5(h4) + h4))
         return self.fc_mu(h5), self.fc_logvar(h5)
     
 
@@ -285,3 +294,65 @@ def loss_function_dae(recon_x, x):
     BCE = -torch.mean(torch.sum(F.log_softmax(recon_x, 1) * x, -1))
     # BCE = torch.nn.BCEWithLogitsLoss(reduction='sum')(recon_x, x)
     return BCE
+
+
+# closed form: fitting -> predict from input
+class EASE(nn.Module):
+    def __init__(self, n_users, n_items):
+        super(EASE, self).__init__()
+
+        self.iid_name = 'item'
+        self.uid_name = 'user'
+
+        self.user_num = n_users
+        self.item_num = n_items
+
+        self.reg_weight = 500 # 이거 계속 바꿔봐야 해!
+
+        self.topk = 10
+
+    def fit(self, X):
+        '''
+        fit closed form parameters
+        X: sparse matrix (user_num * item_num)
+        '''
+
+        G = X.T @ X # item_num * item_num
+        G += self.reg_weight * sp.identity(G.shape[0])
+        G = G.todense() # why not just use scipy?
+
+        P = np.linalg.inv(G)
+        B = -P / np.diag(P) # equation 8 in paper: B_{ij}=0 if i = j else -\frac{P_{ij}}{P_{jj}}
+        np.fill_diagonal(B, 0.)
+
+        self.item_similarity = B # item_num * item_num
+        self.item_similarity = np.array(self.item_similarity)
+        self.interaction_matrix = X # user_num * item_num
+
+    def predict(self, u, i):
+        return self.interaction_matrix[u, :].multiply(self.item_similarity[:, i].T).sum(axis=1).getA1()[0]
+
+    def rank(self, test_loader):
+        rec_ids = None
+
+        for us, cands_ids in test_loader:
+            us = us.numpy()
+            cands_ids = cands_ids.numpy()
+
+            slims = np.expand_dims(self.interaction_matrix[us, :].todense(), axis=1) # batch * item_num -> batch * 1* item_num
+            sims = self.item_similarity[cands_ids, :].transpose(0, 2, 1) # batch * cand_num * item_num -> batch * item_num * cand_num
+            scores = np.einsum('BNi,BiM -> BNM', slims, sims).squeeze(axis=1) # batch * 1 * cand_num -> batch * cand_num
+            rank_ids = np.argsort(-scores)[:, :self.topk]
+            rank_list = cands_ids[np.repeat(np.arange(len(rank_ids)).reshape(-1, 1), rank_ids.shape[1], axis=1), rank_ids]
+
+            rec_ids = rank_list if rec_ids is None else np.vstack([rec_ids, rank_list])
+
+        return rec_ids
+
+    def full_rank(self, u):
+        scores = self.interaction_matrix[u, :] @ self.item_similarity
+        return np.argsort(-scores)[:, :self.topk]
+    
+    def rank_all(self):
+        scores = self.interaction_matrix @ self.item_similarity
+        return np.argsort(-scores)[:,:self.topk]

@@ -13,7 +13,7 @@ from trainers import vae_train, vae_evaluate, recvae_train, recvae_evaluate, tes
 import time
 
 
-def multi_vae_runner(args, model, criterion, optimizer, train_data, vad_data_tr, vad_data_te, epoch, N):
+def multi_vae_runner(args, model, criterion, optimizer, train_data, vad_data_tr, vad_data_te, epoch, N, data_inf):
     epoch_start_time = time.time()
 
     vae_train(args, model, criterion, optimizer, train_data, epoch)
@@ -25,7 +25,7 @@ def multi_vae_runner(args, model, criterion, optimizer, train_data, vad_data_tr,
     return n100
 
 
-def recvae_runner(args, model, criterion, optimizer, train_data, vad_data_tr, vad_data_te, epoch, N):
+def recvae_runner(args, model, criterion, optimizer, train_data, vad_data_tr, vad_data_te, epoch, N, data_inf):
     
     epoch_start_time = time.time()
 
@@ -45,4 +45,13 @@ def recvae_runner(args, model, criterion, optimizer, train_data, vad_data_tr, va
 
     return n100
 
-    
+
+def ease_runner(args, model, criterion, optimizer, train_data, vad_data_tr, vad_data_te, epoch, N, data_inf):
+
+    # train
+    model.fit(data_inf)
+
+    # validation
+
+    epoch = args.epochs
+    return 1
