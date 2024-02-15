@@ -1,0 +1,97 @@
+wandb_version: 1
+
+data_dir:
+  desc: null
+  value: ../../data/train
+data:
+  desc: null
+  value: ../../data/train
+heldout_users:
+  desc: null
+  value: 3000
+lr:
+  desc: null
+  value: 0.0005
+wd:
+  desc: null
+  value: 0.0
+batch_size:
+  desc: null
+  value: 500
+epochs:
+  desc: null
+  value: 30
+total_anneal_steps:
+  desc: null
+  value: 200000
+anneal_cap:
+  desc: null
+  value: 0.35
+seed:
+  desc: null
+  value: 1111
+cuda:
+  desc: null
+  value: true
+log_interval:
+  desc: null
+  value: 100
+save:
+  desc: null
+  value: model.pt
+model:
+  desc: null
+  value: MultiVAE
+encoder_epochs:
+  desc: null
+  value: 3
+beta:
+  desc: null
+  value: false
+gamma:
+  desc: null
+  value: 0.005
+hidden_dim:
+  desc: null
+  value: 600
+latent_dim:
+  desc: null
+  value: 200
+pro_dir:
+  desc: null
+  value: ../../data/train/pro_sg
+device:
+  desc: null
+  value: cuda
+is_VAE:
+  desc: null
+  value: true
+_wandb:
+  desc: null
+  value:
+    python_version: 3.10.13
+    cli_version: 0.16.3
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1708014567.784915
+    t:
+      1:
+      - 1
+      - 55
+      2:
+      - 1
+      - 55
+      3:
+      - 2
+      - 16
+      - 17
+      - 23
+      - 37
+      4: 3.10.13
+      5: 0.16.3
+      8:
+      - 5
+      10:
+      - 3
+      13: linux-x86_64

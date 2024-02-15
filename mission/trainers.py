@@ -6,7 +6,7 @@ import numpy as np
 import time
 from metrics import NDCG_binary_at_k_batch, Recall_at_k_batch
 import pandas as pd
-import json
+import json, wandb
 
 
 def sparse2torch_sparse(data): # encoder F.normalize에서 대신 활용
@@ -41,6 +41,7 @@ def vae_train(args, model, criterion, optimizer, train_data, epoch):
 
     np.random.shuffle(idxlist)
 
+    train_losses = []
     for batch_idx, start_idx in enumerate(range(0, N, args.batch_size)):
         end_idx = min(start_idx + args.batch_size, N)
         batch = train_data[idxlist[start_idx:end_idx]] # 여기의 train_data: sparse interaction matrix 형태
@@ -68,6 +69,7 @@ def vae_train(args, model, criterion, optimizer, train_data, epoch):
         optimizer.step()
 
         args.update_count += 1
+        train_losses.append(loss.item())
 
         if batch_idx % args.log_interval == 0 and batch_idx > 0:
             elapsed = time.time() - start_time
@@ -80,6 +82,8 @@ def vae_train(args, model, criterion, optimizer, train_data, epoch):
 
             start_time = time.time()
             train_loss = 0.0
+        
+    return sum(train_losses) / len(train_losses)
 
 
 def vae_evaluate(args, model, criterion, data_tr, data_te):
@@ -155,8 +159,8 @@ def test(args, model, criterion, test_data_tr, test_data_te):
         test_loss, n100, r10, r20, r50 = ease_evaluate(args, model, test_data_tr, test_data_te)
 
     print('=' * 89)
-    print('| End of training | test loss {:4.2f} | n100 {:4.2f} | r10 {:4.2f}| r20 {:4.2f} | '
-            'r50 {:4.2f}'.format(test_loss, n100, r10, r20, r50))
+    print('| End of training | test loss {:4.3f} | n100 {:4.3f} | r10 {:4.3f}| r20 {:4.3f} | '
+            'r50 {:4.3f}'.format(test_loss, n100, r10, r20, r50))
     print('=' * 89)
 
 
@@ -220,13 +224,24 @@ def inference(args, model, data, current_time):
     result_df.to_csv(f'submission/{args.model}_{current_time}.csv', index=False)
 
 
-def verbose(epoch, epoch_start_time, val_loss, n100, r10, r20, r50):
+def verbose(epoch, epoch_start_time, train_loss, val_loss, n100, r10, r20, r50):
         print('-' * 89)
         print('| end of epoch {:3d} | time: {:4.2f}s | valid loss {:4.2f} | '
                 'n100 {:5.3f} | r10 {:4.2f} | r20 {:5.3f} | r50 {:5.3f}'.format(
                     epoch, time.time() - epoch_start_time, val_loss,
                     n100, r10, r20, r50))
         print('-' * 89)
+
+        wandb.log(
+            dict(
+                epoch=epoch,
+                train_loss=train_loss,
+                val_loss=val_loss,
+                n100=n100,
+                r10=r10,
+                r20=r20,
+                r50=r50
+                ))
 
 
 def recvae_train(args, model, optimizer, train_data, epoch, dropout_rate):
@@ -237,6 +252,7 @@ def recvae_train(args, model, optimizer, train_data, epoch, dropout_rate):
 
     np.random.shuffle(idxlist)
 
+    train_losses = []
     for batch_idx, start_idx in enumerate(range(0, N, args.batch_size)):
         end_idx = min(start_idx + args.batch_size, N)
         data = train_data[idxlist[start_idx:end_idx]] # 여기의 train_data: sparse interaction matrix 형태
@@ -248,6 +264,7 @@ def recvae_train(args, model, optimizer, train_data, epoch, dropout_rate):
         loss.backward()
         optimizer.step()
 
+        train_losses.append(loss.detach().cpu())
         # reporting
         if batch_idx % args.log_interval == 0 and batch_idx > 0:
             elapsed = time.time() - start_time
@@ -260,6 +277,7 @@ def recvae_train(args, model, optimizer, train_data, epoch, dropout_rate):
             start_time = time.time()
             train_loss = 0.0
 
+    return sum(train_losses) / len(train_losses)
 
 def recvae_evaluate(args, model, data_tr, data_te):
     # Turn on evaluation mode
