@@ -50,7 +50,7 @@ def argparsing():
                         help='num of encoder epochs per decoder epoch')
     parser.add_argument('--beta', type=str2bool, default='False',
                         help='recvae composite prior weight')
-    parser.add_argument('--gamma', type=int, default=0.005,
+    parser.add_argument('--gamma', type=float, default=0.005,
                         help='recvae composite prior rebalancing parameter')
     parser.add_argument('--hidden-dim', type=int, default=600)
     parser.add_argument('--latent-dim', type=int, default=200)
