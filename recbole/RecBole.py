@@ -9,6 +9,54 @@ import wandb
 from recbole.utils import init_seed, init_logger
 from recbole.utils.case_study import full_sort_scores
 import torch
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.manifold import TSNE
+
+
+# 예시 데이터 로드
+genres_df = pd.read_csv("./data/train/genres.tsv", sep="\t")
+directors_df = pd.read_csv("./data/train/directors.tsv", sep="\t")
+writers_df = pd.read_csv("./data/train/writers.tsv", sep="\t")
+
+# 장르 데이터 변환
+genres_grouped = genres_df.groupby("item")["genre"].apply(set).reset_index()
+genres_list = genres_grouped["genre"].tolist()
+
+# 감독 데이터 로드 및 변환
+directors_grouped = directors_df.groupby("item")["director"].apply(set).reset_index()
+directors_list = directors_grouped["director"].tolist()
+
+# 작가 데이터 로드 및 변환
+writers_grouped = writers_df.groupby("item")["writer"].apply(set).reset_index()
+writers_list = writers_grouped["writer"].tolist()
+
+# 멀티-핫 인코딩
+mlb_genres = MultiLabelBinarizer()
+genres_encoded = mlb_genres.fit_transform(genres_list)
+
+mlb_directors = MultiLabelBinarizer()
+directors_encoded = mlb_directors.fit_transform(directors_list)
+
+mlb_writers = MultiLabelBinarizer()
+writers_encoded = mlb_writers.fit_transform(writers_list)
+
+
+# 메타데이터 파일 로드
+titles_df = pd.read_csv("./data/train/titles.tsv", sep="\t")
+years_df = pd.read_csv("./data/train/years.tsv", sep="\t")
+
+# 메타데이터 파일 병합
+item_df = titles_df.merge(years_df, on="item", how="left")
+item_df = item_df.merge(directors_df, on="item", how="left")
+item_df = item_df.merge(writers_df, on="item", how="left")
+item_df = item_df.merge(genres_df, on="item", how="left")
+
+# 중복 제거
+item_df = item_df.drop_duplicates(subset=["item"])
+
+# .item 파일로 저장
+item_df.to_csv("./data/train/items.item", index=False, sep="\t")
+
 
 # WandB 스윕 설정
 sweep_config = {
@@ -94,7 +142,7 @@ def generate_recommendations(model, dataset, user_list, top_k=10):
 
 
 # 추천을 생성하고 CSV 파일로 저장
-def save_to_csv(recommendations, model_name, metric_value, path="recommendations"):
+def save_to_csv(recommendations, model_name, metric_value, path=" "):
     # 파일 이름 포맷을 '모델이름_메트릭결과값.csv' 형태로 설정
     formatted_path = f"{path}_{model_name}_{metric_value:.4f}.csv"
     with open(formatted_path, "w") as f:
