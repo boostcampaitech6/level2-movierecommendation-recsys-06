@@ -40,12 +40,15 @@ dataframes = [directors, genres, titles, writers, years, train]
 updated_dataframes, new_item2attribute = update_item_keys(dataframes, item2attribute)
 
 # 수정된 데이터 저장
-output_dir = "data/ntrain"
+output_dir = "data/ntrain/"
 os.makedirs(output_dir, exist_ok=True)
 
 for i, df in enumerate(updated_dataframes):
-    df.to_csv(output_dir + ["directors.tsv", "genres.tsv", "titles.tsv", "writers.tsv", "years.tsv", "train_ratings.csv"][i], sep="\t", index=False)
-
+    if i == 5:  # train_ratings.csv
+        df.to_csv(output_dir + "train_ratings.csv", index=False)  # train_ratings.csv는 index를 저장하지 않음
+    else:
+        df.to_csv(output_dir + ["directors.tsv", "genres.tsv", "titles.tsv", "writers.tsv", "years.tsv"][i], sep="\t", index=False)
+        
 # 수정된 item2attribute 딕셔너리를 JSON 파일로 저장
 with open(output_dir + "Ml_item2attributes.json", "w") as outfile:
     json.dump(new_item2attribute, outfile)
