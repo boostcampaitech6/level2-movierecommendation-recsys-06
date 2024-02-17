@@ -75,46 +75,44 @@ def main():
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     args.cuda_condition = torch.cuda.is_available() and not args.no_cuda
 
-    args.data_file = args.data_dir + "train_ratings.csv"
     item2attribute_file = args.data_dir + args.data_name + "_item2attributes.json"
 
-    user_seq, max_item, _, _, submission_rating_matrix = get_user_seqs(args.data_file)
+    for i in range(3):
+        args.data_file = f"data/split_{i+1}.csv"
 
-    item2attribute, attribute_size = get_item2attribute_json(item2attribute_file)
+        user_seq, max_item, _, _, submission_rating_matrix = get_user_seqs(args.data_file)
 
-    args.item_size = max_item + 2
-    args.mask_id = max_item + 1
-    args.attribute_size = attribute_size + 1
+        item2attribute, attribute_size = get_item2attribute_json(item2attribute_file)
 
-    # save model args
-    args_str = f"{args.model_name}-{args.data_name}"
+        args.item_size = max_item + 2
+        args.mask_id = max_item + 1
+        args.attribute_size = attribute_size + 1
 
-    print(str(args))
+        # save model args
+        args_str = f"{args.model_name}-{args.data_name}"
 
-    args.item2attribute = item2attribute
+        args.item2attribute = item2attribute
 
-    args.train_matrix = submission_rating_matrix
+        args.train_matrix = submission_rating_matrix
 
-    checkpoint = args_str + ".pt"
-    args.checkpoint_path = os.path.join(args.output_dir, checkpoint)
+        checkpoint =  f"{args_str}_{i+1}.pt"
+        args.checkpoint_path = os.path.join(args.output_dir, checkpoint)
 
-    submission_dataset = SASRecDataset(args, user_seq, data_type="submission")
-    submission_sampler = SequentialSampler(submission_dataset)
-    submission_dataloader = DataLoader(
-        submission_dataset, sampler=submission_sampler, batch_size=args.batch_size
-    )
+        submission_dataset = SASRecDataset(args, user_seq, data_type="submission")
+        submission_sampler = SequentialSampler(submission_dataset)
+        submission_dataloader = DataLoader(
+            submission_dataset, sampler=submission_sampler, batch_size=args.batch_size
+        )
 
-    model = S3RecModel(args=args)
+        model = S3RecModel(args=args)
 
-    trainer = FinetuneTrainer(model, None, None, None, submission_dataloader, args)
+        trainer = FinetuneTrainer(model, None, None, None, submission_dataloader, args)
 
-    trainer.load(args.checkpoint_path)
-    print(f"Load model from {args.checkpoint_path} for submission!")
-    preds = trainer.submission(0)
+        trainer.load(args.checkpoint_path)
+        print(f"Load model from {args.checkpoint_path} for submission!")
+        preds = trainer.submission(0)
 
-
-
-    generate_submission_file(args.data_file, preds)
+        generate_submission_file(args.data_file, preds)
 
 
 if __name__ == "__main__":
