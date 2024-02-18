@@ -14,6 +14,7 @@ from utils import (
     get_item2attribute_json,
     get_user_seqs,
     set_seed,
+    get_user_windows
 )
 
 
@@ -83,7 +84,10 @@ def main():
 
     item2attribute_file = args.data_dir + args.data_name + "_item2attributes.json"
 
-    user_seq, max_item, valid_rating_matrix, test_rating_matrix, _ = get_user_seqs(
+    # user_seq, max_item, valid_rating_matrix, test_rating_matrix, _ = get_user_seqs(
+    #     args.data_file
+    # )
+    user_seq, user_windows, max_item, valid_rating_matrix, test_rating_matrix, _ = get_user_windows(args,
         args.data_file
     )
 
@@ -106,7 +110,8 @@ def main():
     checkpoint = args_str + ".pt"
     args.checkpoint_path = os.path.join(args.output_dir, checkpoint)
 
-    train_dataset = SASRecDataset(args, user_seq, data_type="train")
+    # train_dataset = SASRecDataset(args, user_seq, data_type="train")
+    train_dataset = SASRecDataset(args, user_windows, data_type="train")
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(
         train_dataset, sampler=train_sampler, batch_size=args.batch_size

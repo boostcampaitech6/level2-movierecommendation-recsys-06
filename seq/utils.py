@@ -229,6 +229,47 @@ def get_user_seqs(data_file):
         submission_rating_matrix,
     )
 
+def get_user_windows(args, data_file):
+    rating_df = pd.read_csv(data_file)
+    lines = rating_df.groupby("user")["item"].apply(list)
+    user_seq = []
+    user_windows = []
+    item_set = set()
+
+    for line in lines:
+        items = line
+        
+        user_seq.append(items)
+        over = len(items) - args.max_seq_length
+        
+        if over > 0: # sliding window
+            for i in range(over+1):
+                window = items[i:i+args.max_seq_length]
+                user_windows.append(window)
+        else:
+            user_windows.append(items)
+
+        item_set = item_set | set(items)
+    max_item = max(item_set)
+
+    num_windows = len(user_seq)
+    num_users = len(lines)
+    num_items = max_item + 2
+
+    valid_rating_matrix = generate_rating_matrix_valid(user_seq, num_users, num_items)
+    test_rating_matrix = generate_rating_matrix_test(user_seq, num_users, num_items)
+    submission_rating_matrix = generate_rating_matrix_submission(
+        user_seq, num_users, num_items
+    )
+    return (
+        user_seq,
+        user_windows,
+        max_item,
+        valid_rating_matrix,
+        test_rating_matrix,
+        submission_rating_matrix,
+    )
+
 
 def get_user_seqs_long(data_file):
     rating_df = pd.read_csv(data_file)

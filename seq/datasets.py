@@ -175,6 +175,15 @@ class SASRecDataset(Dataset):
             target_pos = items[:]  # will not be used
             answer = []
 
+        # sliding window
+        if self.data_type == 'train':
+            over = len(input_ids) - self.max_len
+            if over > 0:
+                for i in range(over + 1):
+                    window = input_ids[i:i+self.max_len]
+                    input_ids.append(window) # append slided window at tail
+
+        # negative sampling for each timestamp
         target_neg = []
         seq_set = set(items)
         for _ in input_ids:
