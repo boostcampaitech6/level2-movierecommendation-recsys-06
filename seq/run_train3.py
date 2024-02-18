@@ -27,7 +27,7 @@ def main():
     # model args
     parser.add_argument("--model_name", default="Finetune_full", type=str)
     parser.add_argument(
-        "--hidden_size", type=int, default=256, help="hidden size of transformer model"
+        "--hidden_size", type=int, default=128, help="hidden size of transformer model"
     )
     parser.add_argument(
         "--num_hidden_layers", type=int, default=2, help="number of layers"
@@ -68,7 +68,7 @@ def main():
     parser.add_argument("--gpu_id", type=str, default="0", help="gpu_id")
 
     parser.add_argument(
-        "--using_pretrain", type=bool,  help="use to pretrain"
+        "--using_pretrain", type=bool,default=True , help="use to pretrain"
     )
 
     args = parser.parse_args()

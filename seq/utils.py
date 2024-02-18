@@ -162,7 +162,7 @@ def korea_date_time():
     return date_time
 
 def generate_submission_file(data_file, preds):
-
+    date_time = korea_date_time()
     rating_df = pd.read_csv(data_file)
     users = rating_df["user"].unique()
     
@@ -172,10 +172,20 @@ def generate_submission_file(data_file, preds):
         for item in items:
             result.append((users[index], item))
 
-    out=pd.DataFrame(result, columns=["user", "item"])
-    restore(out)
+    out= pd.DataFrame(result, columns=["user", "item"])
 
-def update_item_keys(out, item2attribute):
+    restored_dataframes = restore(out)  
+
+    # 수정된 데이터프레임을 CSV 파일로 저장
+    restored_dataframes.to_csv(f"output/{date_time}.csv", index=False)
+
+def restore(df): 
+
+    # item2attribute 파일 불러오기
+    item2attribute_file = "../data/train/Ml_item2attributes.json"
+    with open(item2attribute_file, "r") as infile:
+        item2attribute = json.load(infile)
+
     new_item2attribute = {}
     item_mapping = {}
     new_item_id = 1
@@ -187,34 +197,8 @@ def update_item_keys(out, item2attribute):
 
     reversed_item_mapping = {v: k for k, v in item_mapping.items()}
 
-    restored_dataframes = []
-    for df in out:
-        df['item'] = df['item'].map(lambda x: reversed_item_mapping.get(str(x), x))
-        restored_dataframes.append(df)
-
-    return restored_dataframes
-
-def restore(out):
-
-    # item2attribute 파일 경로 설정
-    item2attribute_file = "data/train/Ml_item2attributes.json"
-
-
-    # item2attribute 파일 불러오기
-    with open(item2attribute_file, "r") as infile:
-        item2attribute = json.load(infile)
-
-    # 데이터와 item2attribute 수정
-    restored_dataframes= update_item_keys(out, item2attribute)
-
-    # 수정된 데이터프레임을 CSV 파일로 저장
-    date_time=korea_date_time()
-    restored_dataframes[0].to_csv(
-        f"output/{date_time}.csv", index=False
-    )
-
-
-
+    df['item'] = df['item'].map(lambda x: reversed_item_mapping.get(str(x), x))
+    return df
 
 
 def get_user_seqs(data_file):
