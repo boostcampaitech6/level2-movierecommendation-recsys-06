@@ -1,2 +1,10 @@
 /data
 *.log
+
+*.pt
+*.csv
+*.json
+/recbole/data
+/recbole/test.py
+/wandb
+/__pycahce__
