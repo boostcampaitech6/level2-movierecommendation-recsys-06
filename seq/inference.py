@@ -44,7 +44,7 @@ def main():
         "--hidden_dropout_prob", type=float, default=0.5, help="hidden dropout p"
     )
     parser.add_argument("--initializer_range", type=float, default=0.02)
-    parser.add_argument("--max_seq_length", default=100, type=int)
+    parser.add_argument("--max_seq_length", default=300, type=int)
 
     # train args
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate of adam")
@@ -114,7 +114,7 @@ def main():
 
 
 
-    generate_submission_file(args.data_file, preds)
+    generate_submission_file(args, preds)
 
 
 if __name__ == "__main__":
