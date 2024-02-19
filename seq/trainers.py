@@ -5,6 +5,7 @@ import tqdm
 from torch.optim import Adam
 
 from utils import ndcg_k, recall_at_k
+import wandb
 
 
 class Trainer:
@@ -250,6 +251,7 @@ class FinetuneTrainer(Trainer):
 
                 rec_avg_loss += loss.item()
                 rec_cur_loss = loss.item()
+            wandb.log({ "rec_avg_loss": rec_avg_loss / len(rec_data_iter), "rec_cur_loss": rec_cur_loss})
 
             post_fix = {
                 "epoch": epoch,
@@ -302,6 +304,17 @@ class FinetuneTrainer(Trainer):
                     )
 
             if mode == "submission":
+                
                 return pred_list
             else:
+                # Log evaluation metrics to WandB
+                metrics, post_fix = self.get_full_sort_score(epoch, answer_list, pred_list)
+                
+                log= {'RECALL@5':  metrics[0], 'NDCG@5':  metrics[1], 
+                      'RECALL@10':  metrics[2], 'NDCG@10':  metrics[3]
+                }      
+                wandb.log(log)
+
+                self.args.total_score=metrics[2]
+                
                 return self.get_full_sort_score(epoch, answer_list, pred_list)

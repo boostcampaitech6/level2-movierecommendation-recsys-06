@@ -34,6 +34,8 @@ def soft_voting(args):
     save_file(output)
 
 
+## python ensemble.py
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 

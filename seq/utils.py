@@ -44,7 +44,7 @@ class EarlyStopping:
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
-                            Default: 5
+                            Default: 10
             verbose (bool): If True, prints a message for each validation loss improvement.
                             Default: False
             delta (float): Minimum change in the monitored quantity to qualify as an improvement.
@@ -161,9 +161,9 @@ def korea_date_time():
     
     return date_time
 
-def generate_submission_file(data_file, preds):
-    date_time = korea_date_time()
-    rating_df = pd.read_csv(data_file)
+def generate_submission_file(args, preds):
+    
+    rating_df = pd.read_csv(args.data_file)
     users = rating_df["user"].unique()
     
     result = []
@@ -177,7 +177,7 @@ def generate_submission_file(data_file, preds):
     restored_dataframes = restore(out)  
 
     # 수정된 데이터프레임을 CSV 파일로 저장
-    restored_dataframes.to_csv(f"output/{date_time}.csv", index=False)
+    restored_dataframes.to_csv(f"output/{args.total_score} {args.date_time}.csv", index=False)
 
 def restore(df): 
 

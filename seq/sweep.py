@@ -13,12 +13,33 @@ from utils import (
     check_path,
     get_item2attribute_json,
     get_user_seqs,
-    set_seed,
+    set_seed, korea_date_time,
+    generate_submission_file
 )
 
+import wandb
+import yaml
 
-def main():
+
+def train():
     parser = argparse.ArgumentParser()
+
+    default_config={
+    "hidden_size": 256,
+    "num_hidden_layers": 2,
+    "num_attention_heads": 2,
+    "attention_probs_dropout_prob": 0.5,
+    "hidden_dropout_prob": 0.5,
+    "initializer_range": 0.02,
+    "max_seq_length": 300,
+    "lr": 0.001,
+    "batch_size": 256,
+    "weight_decay": 0.0,
+    "adam_beta1": 0.9,
+    "adam_beta2": 0.999,
+    }    
+
+    wandb.init(project="MovieRec", entity="yechance7",config=default_config)
 
     parser.add_argument("--data_dir", default="../data/ntrain/", type=str)
     parser.add_argument("--output_dir", default="output/", type=str)
@@ -27,55 +48,59 @@ def main():
     # model args
     parser.add_argument("--model_name", default="Finetune_full", type=str)
     parser.add_argument(
-        "--hidden_size", type=int, default=256, help="hidden size of transformer model"
+        "--hidden_size", type=int, default=wandb.config.hidden_size, help="hidden size of transformer model"
     )
     parser.add_argument(
-        "--num_hidden_layers", type=int, default=2, help="number of layers"
+        "--num_hidden_layers", type=int, default=wandb.config.num_hidden_layers, help="number of layers"
     )
-    parser.add_argument("--num_attention_heads", default=2, type=int)
+    parser.add_argument("--num_attention_heads", default=wandb.config.num_attention_heads, type=int)
     parser.add_argument("--hidden_act", default="gelu", type=str)  # gelu relu
     parser.add_argument(
         "--attention_probs_dropout_prob",
         type=float,
-        default=0.5,
+        default=wandb.config.attention_probs_dropout_prob,
         help="attention dropout p",
     )
     parser.add_argument(
-        "--hidden_dropout_prob", type=float, default=0.5, help="hidden dropout p"
+        "--hidden_dropout_prob", type=float, default=wandb.config.hidden_dropout_prob, help="hidden dropout p"
     )
-    parser.add_argument("--initializer_range", type=float, default=0.02)
-    parser.add_argument("--max_seq_length", default=300, type=int)
+    parser.add_argument("--initializer_range", type=float, default=wandb.config.initializer_range)
+    parser.add_argument("--max_seq_length", default=wandb.config.max_seq_length, type=int)
 
     # train args
-    parser.add_argument("--lr", type=float, default=0.001, help="learning rate of adam")
+    parser.add_argument("--lr", type=float, default=wandb.config.lr, help="learning rate of adam")
     parser.add_argument(
-        "--batch_size", type=int, default=256, help="number of batch_size"
+        "--batch_size", type=int, default=wandb.config.batch_size, help="number of batch_size"
     )
-    parser.add_argument("--epochs", type=int, default=200, help="number of epochs")
+    parser.add_argument("--epochs", type=int, default=300, help="number of epochs")
     parser.add_argument("--no_cuda", action="store_true")
     parser.add_argument("--log_freq", type=int, default=1, help="per epoch print res")
     parser.add_argument("--seed", default=42, type=int)
 
     parser.add_argument(
-        "--weight_decay", type=float, default=0.0, help="weight_decay of adam"
+        "--weight_decay", type=float, default=wandb.config.weight_decay, help="weight_decay of adam"
     )
     parser.add_argument(
-        "--adam_beta1", type=float, default=0.9, help="adam first beta value"
+        "--adam_beta1", type=float, default=wandb.config.adam_beta1, help="adam first beta value"
     )
     parser.add_argument(
-        "--adam_beta2", type=float, default=0.999, help="adam second beta value"
+        "--adam_beta2", type=float, default=wandb.config.adam_beta2, help="adam second beta value"
     )
     parser.add_argument("--gpu_id", type=str, default="0", help="gpu_id")
 
     parser.add_argument(
-        "--using_pretrain", type=bool, default=True, help="use to pretrain"
+        "--using_pretrain", type=bool, help="use to pretrain"
     )
 
     args = parser.parse_args()
 
     set_seed(args.seed)
     check_path(args.output_dir)
-
+    
+    args.date_time = korea_date_time()
+    wandb.run.name = f"{args.date_time} yechan"
+        
+    
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     args.cuda_condition = torch.cuda.is_available() and not args.no_cuda
 
@@ -158,8 +183,34 @@ def main():
     # load the best model
     trainer.model.load_state_dict(torch.load(args.checkpoint_path))
     scores, result_info = trainer.test(0)
-    print(result_info)
+    #print(result_info)
 
 
-if __name__ == "__main__":
-    main()
+    #inference
+    print("---------------Inference-------------------")
+    submission_dataset = SASRecDataset(args, user_seq, data_type="submission")
+    submission_sampler = SequentialSampler(submission_dataset)
+    submission_dataloader = DataLoader(
+        submission_dataset, sampler=submission_sampler, batch_size=args.batch_size
+    )
+
+    model = S3RecModel(args=args)
+
+    trainer = FinetuneTrainer(model, None, None, None, submission_dataloader, args)
+
+    trainer.load(args.checkpoint_path)
+    print(f"Load model from {args.checkpoint_path} for submission!")
+    preds= trainer.submission(0)
+
+    generate_submission_file(args, preds)
+
+# sweep config
+sweep_config_path = 'sweepconfig.yaml'
+with open(sweep_config_path, 'r') as file:
+    sweep_config = yaml.safe_load(file)
+
+wandb.login()
+sweep_id = wandb.sweep(sweep=sweep_config, project="MovieRec")
+
+wandb.agent(sweep_id, train)
+
