@@ -26,11 +26,8 @@ def train():
 
     default_config={
     "hidden_size": 256,
-    "num_hidden_layers": 2,
-    "num_attention_heads": 2,
     "attention_probs_dropout_prob": 0.5,
     "hidden_dropout_prob": 0.5,
-    "initializer_range": 0.02,
     "max_seq_length": 300,
     "lr": 0.001,
     "batch_size": 256,
@@ -38,7 +35,7 @@ def train():
     "adam_beta2": 0.999,
     }    
 
-    wandb.init(project="MovieRec", entity="boostcamp6-recsys6",config=default_config)
+    wandb.init(config=default_config)
 
     parser.add_argument("--data_dir", default="../data/ntrain/", type=str)
     parser.add_argument("--output_dir", default="output/", type=str)
@@ -50,9 +47,9 @@ def train():
         "--hidden_size", type=int, default=wandb.config.hidden_size, help="hidden size of transformer model"
     )
     parser.add_argument(
-        "--num_hidden_layers", type=int, default=wandb.config.num_hidden_layers, help="number of layers"
+        "--num_hidden_layers", type=int, default=2, help="number of layers"
     )
-    parser.add_argument("--num_attention_heads", default=wandb.config.num_attention_heads, type=int)
+    parser.add_argument("--num_attention_heads", default=2, type=int)
     parser.add_argument("--hidden_act", default="gelu", type=str)  # gelu relu
     parser.add_argument(
         "--attention_probs_dropout_prob",
@@ -63,7 +60,7 @@ def train():
     parser.add_argument(
         "--hidden_dropout_prob", type=float, default=wandb.config.hidden_dropout_prob, help="hidden dropout p"
     )
-    parser.add_argument("--initializer_range", type=float, default=wandb.config.initializer_range)
+    parser.add_argument("--initializer_range", type=float, default=0.02)
     parser.add_argument("--max_seq_length", default=wandb.config.max_seq_length, type=int)
 
     # train args
@@ -209,7 +206,7 @@ with open(sweep_config_path, 'r') as file:
     sweep_config = yaml.safe_load(file)
 
 wandb.login()
-sweep_id = wandb.sweep(sweep=sweep_config, project="MovieRec")
+sweep_id = wandb.sweep(sweep=sweep_config, project="MovieRec", entity="boostcamp6-recsys6",)
 
 wandb.agent(sweep_id, train)
 
