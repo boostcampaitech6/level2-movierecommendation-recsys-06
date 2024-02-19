@@ -175,6 +175,7 @@ class SASRecDataset(Dataset):
             target_pos = items[:]  # will not be used
             answer = []
 
+        # negative sampling for each timestamp
         target_neg = []
         seq_set = set(items)
         for _ in input_ids:
