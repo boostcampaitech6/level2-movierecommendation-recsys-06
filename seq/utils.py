@@ -177,12 +177,12 @@ def generate_submission_file(args, preds):
     restored_dataframes = restore(out)  
 
     # 수정된 데이터프레임을 CSV 파일로 저장
-    restored_dataframes.to_csv(f"output/{args.total_score} {args.date_time}.csv", index=False)
+    restored_dataframes.to_csv(f"output/SASRec.csv", index=False)
 
 def restore(df): 
 
     # item2attribute 파일 불러오기
-    item2attribute_file = "../data/train/Ml_item2attributes.json"
+    item2attribute_file = "../../data/ntrain/Ml_item2attributes.json"
     with open(item2attribute_file, "r") as infile:
         item2attribute = json.load(infile)
 
@@ -234,20 +234,23 @@ def get_user_windows(args, data_file):
     lines = rating_df.groupby("user")["item"].apply(list)
     user_seq = []
     user_windows = []
+    user_items = []
     item_set = set()
 
     for line in lines:
         items = line
-        
         user_seq.append(items)
+
+         # sliding window
         over = len(items) - (args.max_seq_length + 2)
-        
-        if over > 0: # sliding window
-            for i in range(min(over+1, args.n_windows)):
+        if over > 0:
+            for i in range(0,min(over+1, args.n_windows * args.stride), args.stride):
                 window = items[-1*(args.max_seq_length+2+i):-1*(2+i)] # 뒤에서부터 n_windows
                 user_windows.append(window)
+                user_items.append(items)
         else:
             user_windows.append(items)
+            user_items.append(items)
 
         item_set = item_set | set(items)
     max_item = max(item_set)
@@ -264,6 +267,7 @@ def get_user_windows(args, data_file):
     return (
         user_seq,
         user_windows,
+        user_items,
         max_item,
         valid_rating_matrix,
         test_rating_matrix,

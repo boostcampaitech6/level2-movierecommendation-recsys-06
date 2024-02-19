@@ -4,8 +4,9 @@ import os
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+import wandb
 
-from datasets import SASRecDataset
+from datasets import SASRecDataset, SASRecDataset_slide, SASRecDataset_neg
 from models import S3RecModel
 from trainers import FinetuneTrainer
 from utils import (
@@ -14,7 +15,8 @@ from utils import (
     get_item2attribute_json,
     get_user_seqs,
     set_seed,
-    get_user_windows
+    get_user_windows,
+    korea_date_time
 )
 
 
@@ -73,7 +75,11 @@ def main():
     )
 
     parser.add_argument(
-        "--n_windows", type=int, default=2, help="num of windows"
+        "--n_windows", type=int, default=5, help="num of windows"
+    )
+
+    parser.add_argument(
+        "--stride", type=int, default=20, help="num of windows"
     )
 
     args = parser.parse_args()
@@ -83,6 +89,13 @@ def main():
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu_id
     args.cuda_condition = torch.cuda.is_available() and not args.no_cuda
+    args.date_time = korea_date_time()
+
+    wandb.login()
+    wandb.init(entity='boostcamp6-recsys6', project='level2-movie-seq_window', config=args)
+    wandb.run.name = f'Hyeongjin {args.date_time}'
+    wandb.run.save()
+
 
     args.data_file = args.data_dir + "train_ratings.csv"
 
@@ -91,7 +104,7 @@ def main():
     # user_seq, max_item, valid_rating_matrix, test_rating_matrix, _ = get_user_seqs(
     #     args.data_file
     # )
-    user_seq, user_windows, max_item, valid_rating_matrix, test_rating_matrix, _ = get_user_windows(args,
+    user_seq, user_windows, user_items, max_item, valid_rating_matrix, test_rating_matrix, _ = get_user_windows(args,
         args.data_file
     )
 
@@ -111,11 +124,11 @@ def main():
     args.train_matrix = valid_rating_matrix
 
     # save model
-    checkpoint = args_str + ".pt"
+    checkpoint = args_str + args.date_time + ".pt"
     args.checkpoint_path = os.path.join(args.output_dir, checkpoint)
 
     # train_dataset = SASRecDataset(args, user_seq, data_type="train")
-    train_dataset = SASRecDataset(args, user_windows, data_type="train")
+    train_dataset = SASRecDataset_slide(args, user_windows, user_items, data_type="train")
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(
         train_dataset, sampler=train_sampler, batch_size=args.batch_size
