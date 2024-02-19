@@ -34,12 +34,11 @@ def train():
     "max_seq_length": 300,
     "lr": 0.001,
     "batch_size": 256,
-    "weight_decay": 0.0,
     "adam_beta1": 0.9,
     "adam_beta2": 0.999,
     }    
 
-    wandb.init(project="MovieRec", entity="yechance7",config=default_config)
+    wandb.init(project="MovieRec", entity="boostcamp6-recsys6",config=default_config)
 
     parser.add_argument("--data_dir", default="../data/ntrain/", type=str)
     parser.add_argument("--output_dir", default="output/", type=str)
@@ -78,7 +77,7 @@ def train():
     parser.add_argument("--seed", default=42, type=int)
 
     parser.add_argument(
-        "--weight_decay", type=float, default=wandb.config.weight_decay, help="weight_decay of adam"
+        "--weight_decay", type=float, default=0.0, help="weight_decay of adam"
     )
     parser.add_argument(
         "--adam_beta1", type=float, default=wandb.config.adam_beta1, help="adam first beta value"

@@ -31,9 +31,6 @@ parameters:
     max: 0.01
   batch_size:
     values: [128, 192, 256, 320, 384]
-  weight_decay:
-    min: 0.0
-    max: 0.1
   adam_beta1:
     min: 0.8
     max: 0.99
