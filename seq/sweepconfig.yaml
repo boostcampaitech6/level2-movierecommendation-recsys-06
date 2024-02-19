@@ -1,0 +1,39 @@
+project: "MovieRec"
+#wandb_key: "94946105119ec351449b8804db6ee391455be504"
+
+method: bayes
+
+metric:
+  name: "recall@10"
+  goal: "maximize"
+
+parameters:
+  hidden_size:
+    values: [128, 192, 256, 320, 384]
+  num_hidden_layers:
+    values: [1, 2, 3]
+  num_attention_heads:
+    values: [1, 2, 4]
+  attention_probs_dropout_prob:
+    min: 0.1
+    max: 0.5
+  hidden_dropout_prob:
+    min: 0.1
+    max: 0.5
+  initializer_range:
+    min: 0.01
+    max: 0.05
+  max_seq_length:
+    min: 100
+    max: 500
+  lr:
+    min: 0.0001
+    max: 0.01
+  batch_size:
+    values: [128, 192, 256, 320, 384]
+  adam_beta1:
+    min: 0.8
+    max: 0.99
+  adam_beta2:
+    min: 0.99
+    max: 0.9999
