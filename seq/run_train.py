@@ -69,7 +69,11 @@ def main():
     parser.add_argument("--gpu_id", type=str, default="0", help="gpu_id")
 
     parser.add_argument(
-        "--using_pretrain", type=bool, default=True, help="use to pretrain"
+        "--using_pretrain", type=bool, default=False, help="use to pretrain"
+    )
+
+    parser.add_argument(
+        "--n_windows", type=int, default=2, help="num of windows"
     )
 
     args = parser.parse_args()

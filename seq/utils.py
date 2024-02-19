@@ -240,11 +240,11 @@ def get_user_windows(args, data_file):
         items = line
         
         user_seq.append(items)
-        over = len(items) - args.max_seq_length
+        over = len(items) - (args.max_seq_length + 2)
         
         if over > 0: # sliding window
-            for i in range(over+1):
-                window = items[i:i+args.max_seq_length]
+            for i in range(min(over+1, args.n_windows)):
+                window = items[-1*(args.max_seq_length+2+i):-1*(2+i)] # 뒤에서부터 n_windows
                 user_windows.append(window)
         else:
             user_windows.append(items)
