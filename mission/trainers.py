@@ -406,3 +406,67 @@ def inference2(args, model, data, current_time):
     
     result_df = result.sort_values('user').reset_index(drop=True)
     result_df.to_csv(f'submission/{args.model}_{current_time}.csv', index=False)
+
+
+def inference3(args, model, data, current_time):
+   
+    # id
+    with open('json_id/id2show_2.json', 'r') as json_file:
+        id2show = json.load(json_file)
+    id2show = json.loads(id2show)
+
+    with open('json_id/id2profile_2.json', 'r') as json_file:
+        id2profile = json.load(json_file)
+    id2profile = json.loads(id2profile)
+
+
+    # turn on eval mode
+    model.eval()
+    idxlist = list(range(data.shape[0]))
+    N = data.shape[0]
+    total_topk = []
+    pred = []
+    result = pd.DataFrame()
+
+    if args.model=='EASE':
+        pred = model.rank_new(data)
+        total_topk = pred.reshape(-1)
+
+    else:
+        with torch.no_grad():
+            for start_idx in range(0, N, args.batch_size):
+                end_idx = min(start_idx + args.batch_size, N)
+                batch = data[idxlist[start_idx:end_idx]]
+
+                data_tensor = naive_sparse2tensor(batch).to(args.device)
+                # data_tensor = sparse2torch_sparse(batch).to(args.device)
+                if args.model=='MultiVAE':
+                    recon_batch, mu, logvar = model(data_tensor)
+                elif args.model=='MultiDAE':
+                    recon_batch = model(data_tensor)
+                elif args.model=='RecVAE':
+                    recon_batch = model(data_tensor, beta=args.beta, gamma=args.gamma, dropout_rate=0, calculate_loss=False)
+                else:
+                    raise KeyError(f"There's no such model {args.model}")
+
+                # Exclude examples from training set
+                recon_batch = recon_batch
+                recon_batch[batch.nonzero()] = -1e9
+
+                # top-k choice
+                topk = torch.topk(input=recon_batch, k=30)
+                batch_topk = list(topk.indices.reshape(-1).detach().cpu().numpy())
+                total_topk.extend(batch_topk)
+                for recon,k in zip(recon_batch, topk.indices):
+                    pred.extend(recon[k].detach().cpu().numpy())
+
+
+    result['user'] = np.repeat(np.arange(31360),30)
+    result['item'] = total_topk
+    result['prob'] = pred
+
+    result['user'] = result['user'].apply(lambda x: id2profile[str(x)])
+    result['item'] = result['item'].apply(lambda x: id2show[str(x)])
+    
+    result_df = result.sort_values('user').reset_index(drop=True)
+    result_df.to_csv(f'submission/{args.model}_{current_time}.csv', index=False)

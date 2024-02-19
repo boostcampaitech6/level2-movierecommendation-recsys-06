@@ -10,7 +10,7 @@ import pandas as pd
 from dataloader import DataLoader
 from dataloader2 import DataLoader2
 from models import MultiDAE, MultiVAE, RecVAE, EASE, loss_function_dae, loss_function_vae
-from trainers import test, inference, inference2
+from trainers import test, inference, inference2, inference3
 import time
 from runners import multi_vae_runner, recvae_runner, ease_runner
 import pytz
@@ -87,6 +87,7 @@ with open(f'model_files/{args.model} {current_time}.pt', 'rb') as f:
 
 ## Inference
 print('\nINFERING....')
-inference2(args, model, data_inf, current_time)
+# inference2(args, model, data_inf, current_time) # 일반 inference
+inference3(args, model, data_inf, current_time) # for soft voting
 
 wandb.finish()
