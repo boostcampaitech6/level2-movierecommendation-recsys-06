@@ -76,7 +76,7 @@ def main():
     args.cuda_condition = torch.cuda.is_available() and not args.no_cuda
 
     args.data_file = args.data_dir + "train_ratings.csv"
-    item2attribute_file = args.data_dir + args.data_name + "_item2attributes.json"
+    item2attribute_file = args.data_dir +  "Ml_item2attributes.json"
 
     user_seq, max_item, _, _, submission_rating_matrix = get_user_seqs(args.data_file)
 

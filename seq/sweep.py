@@ -26,11 +26,10 @@ def train():
 
     default_config={
     "hidden_size": 256,
-    "attention_probs_dropout_prob": 0.5,
-    "hidden_dropout_prob": 0.5,
+    "attention_probs_dropout_prob": 0.2,
+    "hidden_dropout_prob": 0.3,
     "max_seq_length": 300,
     "lr": 0.001,
-    "batch_size": 256,
     "adam_beta1": 0.9,
     "adam_beta2": 0.999,
     }    
@@ -66,7 +65,7 @@ def train():
     # train args
     parser.add_argument("--lr", type=float, default=wandb.config.lr, help="learning rate of adam")
     parser.add_argument(
-        "--batch_size", type=int, default=wandb.config.batch_size, help="number of batch_size"
+        "--batch_size", type=int, default=256, help="number of batch_size"
     )
     parser.add_argument("--epochs", type=int, default=300, help="number of epochs")
     parser.add_argument("--no_cuda", action="store_true")
@@ -206,7 +205,7 @@ with open(sweep_config_path, 'r') as file:
     sweep_config = yaml.safe_load(file)
 
 wandb.login()
-sweep_id = wandb.sweep(sweep=sweep_config, project="MovieRec", entity="boostcamp6-recsys6",)
+sweep_id = wandb.sweep(sweep=sweep_config, project="MovieRec", entity="boostcamp6-recsys6")
 
 wandb.agent(sweep_id, train)
 

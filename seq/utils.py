@@ -177,12 +177,12 @@ def generate_submission_file(args, preds):
     restored_dataframes = restore(out)  
 
     # 수정된 데이터프레임을 CSV 파일로 저장
-    restored_dataframes.to_csv(f"output/SASRec.csv", index=False)
+    restored_dataframes.to_csv(f"output/{args.total_score} {args.date_time}.csv", index=False)
 
 def restore(df): 
 
     # item2attribute 파일 불러오기
-    item2attribute_file = "../../data/ntrain/Ml_item2attributes.json"
+    item2attribute_file = "../data/train/Ml_item2attributes.json"
     with open(item2attribute_file, "r") as infile:
         item2attribute = json.load(infile)
 

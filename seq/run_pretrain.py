@@ -28,7 +28,7 @@ def main():
     parser.add_argument("--model_name", default="Pretrain", type=str)
 
     parser.add_argument(
-        "--hidden_size", type=int, default=128, help="hidden size of transformer model"
+        "--hidden_size", type=int, default=256, help="hidden size of transformer model"
     )
     parser.add_argument(
         "--num_hidden_layers", type=int, default=2, help="number of layers"
@@ -45,7 +45,7 @@ def main():
         "--hidden_dropout_prob", type=float, default=0.5, help="hidden dropout p"
     )
     parser.add_argument("--initializer_range", type=float, default=0.02)
-    parser.add_argument("--max_seq_length", default=100, type=int)
+    parser.add_argument("--max_seq_length", default=300, type=int)
 
     # train args
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate of adam")

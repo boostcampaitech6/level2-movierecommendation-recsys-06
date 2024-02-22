@@ -16,7 +16,8 @@ from utils import (
     get_user_seqs,
     set_seed,
     get_user_windows,
-    korea_date_time
+    korea_date_time,
+    generate_submission_file
 )
 
 
@@ -40,11 +41,11 @@ def main():
     parser.add_argument(
         "--attention_probs_dropout_prob",
         type=float,
-        default=0.5,
+        default=0.2,
         help="attention dropout p",
     )
     parser.add_argument(
-        "--hidden_dropout_prob", type=float, default=0.5, help="hidden dropout p"
+        "--hidden_dropout_prob", type=float, default=0.3, help="hidden dropout prob"
     )
     parser.add_argument("--initializer_range", type=float, default=0.02)
     parser.add_argument("--max_seq_length", default=300, type=int)
@@ -92,21 +93,16 @@ def main():
     args.date_time = korea_date_time()
 
     wandb.login()
-    wandb.init(entity='boostcamp6-recsys6', project='level2-movie-seq_window', config=args)
-    wandb.run.name = f'Hyeongjin {args.date_time}'
-    wandb.run.save()
+    wandb.init(project="MovieRec", entity="boostcamp6-recsys6", config=args)
+    wandb.run.name = f"{args.date_time} yechan"
 
 
     args.data_file = args.data_dir + "train_ratings.csv"
 
     item2attribute_file = args.data_dir + args.data_name + "_item2attributes.json"
 
-    # user_seq, max_item, valid_rating_matrix, test_rating_matrix, _ = get_user_seqs(
-    #     args.data_file
-    # )
-    user_seq, user_windows, user_items, max_item, valid_rating_matrix, test_rating_matrix, _ = get_user_windows(args,
-        args.data_file
-    )
+    user_seq, max_item, valid_rating_matrix, test_rating_matrix, _ = get_user_seqs(args.data_file)
+    #user_seq, user_windows, user_items, max_item, valid_rating_matrix, test_rating_matrix, _ = get_user_windows(args,args.data_file)
 
     item2attribute, attribute_size = get_item2attribute_json(item2attribute_file)
 
@@ -127,8 +123,8 @@ def main():
     checkpoint = args_str + args.date_time + ".pt"
     args.checkpoint_path = os.path.join(args.output_dir, checkpoint)
 
-    # train_dataset = SASRecDataset(args, user_seq, data_type="train")
-    train_dataset = SASRecDataset_slide(args, user_windows, user_items, data_type="train")
+    train_dataset = SASRecDataset(args, user_seq, data_type="train")
+    #train_dataset = SASRecDataset_slide(args, user_windows, user_items, data_type="train")
     train_sampler = RandomSampler(train_dataset)
     train_dataloader = DataLoader(
         train_dataset, sampler=train_sampler, batch_size=args.batch_size
@@ -164,7 +160,7 @@ def main():
     else:
         print("Not using pretrained model. The Model is same as SASRec")
 
-    early_stopping = EarlyStopping(args.checkpoint_path, patience=7, verbose=True)
+    early_stopping = EarlyStopping(args.checkpoint_path, patience=10, verbose=True)
     for epoch in range(args.epochs):
         trainer.train(epoch)
 
@@ -181,6 +177,24 @@ def main():
     trainer.model.load_state_dict(torch.load(args.checkpoint_path))
     scores, result_info = trainer.test(0)
     print(result_info)
+
+    #inference
+    print("---------------Inference-------------------")
+    submission_dataset = SASRecDataset(args, user_seq, data_type="submission")
+    submission_sampler = SequentialSampler(submission_dataset)
+    submission_dataloader = DataLoader(
+        submission_dataset, sampler=submission_sampler, batch_size=args.batch_size
+    )
+
+    model = S3RecModel(args=args)
+
+    trainer = FinetuneTrainer(model, None, None, None, submission_dataloader, args)
+
+    trainer.load(args.checkpoint_path)
+    print(f"Load model from {args.checkpoint_path} for submission!")
+    preds= trainer.submission(0)
+
+    generate_submission_file(args, preds)
 
 
 if __name__ == "__main__":
