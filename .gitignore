@@ -1,0 +1,12 @@
+/data
+*.log
+
+*.json
+
+__pycache__
+
+wandb
+
+*.csv
+
+*.pt

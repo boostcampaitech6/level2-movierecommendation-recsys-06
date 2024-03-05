@@ -1,0 +1,10 @@
+#_lambda: 300
+# scale: 1
+data_path: "../data/train"
+
+#wandb setting
+wandb_key: "94946105119ec351449b8804db6ee391455be504"
+user_name: 'yechance7'
+
+_lambda: 300
+scale: 1

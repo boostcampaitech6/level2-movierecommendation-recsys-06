@@ -1,0 +1,38 @@
+name: 기능 추가 요청
+description: 프로젝트에 추가하고 싶은 새로운 기능이나 개선 사항을 제안합니다.
+title: "[FEATURE] "
+labels: ["feature"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 기능 추가 요청
+        프로젝트에 추가하고 싶은 새로운 기능이나 개선 사항에 대한 아이디어를 자세히 설명해주세요.
+
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: 기능 설명
+      description: 요청하는 기능에 대한 상세한 설명을 제공해주세요.
+      placeholder: 기능에 대한 상세한 설명을 여기에 작성해주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem-solution
+    attributes:
+      label: 이 기능이 해결할 문제
+      description: 이 기능을 통해 해결하고자 하는 문제나 필요성에 대해 적어주세요.
+      placeholder: 이 기능이 해결하고자 하는 구체적인 문제나 필요성을 여기에 작성해주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 추가 컨텍스트
+      description: 기능 요청과 관련된 추가적인 정보가 있으면 제공해주세요.
+      placeholder: 추가적인 정보나 컨텍스트를 여기에 작성해주세요.
+    validations:
+      required: false

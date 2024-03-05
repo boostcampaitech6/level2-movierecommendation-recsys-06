@@ -1,0 +1,50 @@
+name: 버그 리포트
+description: 프로젝트에서 발견된 버그를 보고합니다.
+title: "[BUG] "
+labels: ["bug"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 버그 리포트
+        발견된 버그에 대해 가능한 많은 정보를 제공해주세요.
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: 버그 설명
+      description: 발생한 버그에 대한 상세한 설명을 제공해주세요.
+      placeholder: 버그에 대한 에러 메세지 포함 상세한 설명을 여기에 작성해주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce-steps
+    attributes:
+      label: 재현 단계
+      description: 버그를 어떻게 재현할 수 있는지 단계별로 설명해주세요.
+      placeholder: |
+        버그가 생기기 전 수정부분
+        버그가 생기기전 마지막 커밋 번호
+
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: 예상한 행동
+      description: 버그가 없을 경우 기대했던 동작은 무엇인가요?
+      placeholder: 정상적인 경우 기대하는 행동을 여기에 작성해주세요.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 추가 컨텍스트
+      description: 버그 보고에 도움이 될 수 있는 스크린샷이나 로그 파일 등 추가 정보를 제공해주세요.
+      placeholder: 추가 정보를 여기에 작성해주세요.
+    validations:
+      required: false
